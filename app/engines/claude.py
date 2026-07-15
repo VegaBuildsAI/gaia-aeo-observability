@@ -54,6 +54,18 @@ class ClaudeWebSearchAdapter(EngineAdapter):
         return _parse(resp, latency)
 
 
+def _get(obj, name: str, default=None):
+    """Lee un campo tanto de un objeto tipado del SDK como de un dict crudo.
+
+    Por qué: según la versión del SDK, los bloques de `web_search` llegan como objetos
+    tipados o como dicts. Usar solo getattr() devolvía vacío con dicts — ese fue el bug
+    que dejó `cited_domains` en [] durante toda la campaña.
+    """
+    if isinstance(obj, dict):
+        return obj.get(name, default)
+    return getattr(obj, name, default)
+
+
 def _parse(resp, latency_ms: int) -> EngineResponse:
     """Recorre los content blocks: junta texto y recolecta citaciones (en orden)."""
     text_parts: list[str] = []
@@ -68,22 +80,21 @@ def _parse(resp, latency_ms: int) -> EngineResponse:
         from ..matching import domain_of
         citations.append(Citation(url=url, domain=domain_of(url), title=title or ""))
 
-    for block in getattr(resp, "content", []) or []:
-        btype = getattr(block, "type", "")
+    for block in _get(resp, "content", []) or []:
+        btype = _get(block, "type", "")
         # 1) Bloques de texto: pueden llevar citations embebidas (orden de aparición).
         if btype == "text":
-            text_parts.append(getattr(block, "text", "") or "")
-            for c in (getattr(block, "citations", None) or []):
-                add_cite(getattr(c, "url", ""), getattr(c, "title", ""))
+            text_parts.append(_get(block, "text", "") or "")
+            for c in (_get(block, "citations", None) or []):
+                add_cite(_get(c, "url", ""), _get(c, "title", ""))
         # 2) Resultado de la búsqueda web (fuentes que Claude consultó).
         elif btype == "web_search_tool_result":
-            content = getattr(block, "content", None) or []
-            for r in content:
-                add_cite(getattr(r, "url", ""), getattr(r, "title", ""))
+            for r in (_get(block, "content", None) or []):
+                add_cite(_get(r, "url", ""), _get(r, "title", ""))
 
     return EngineResponse(
         answer_text="".join(text_parts).strip(),
         citations=citations,
-        model=getattr(resp, "model", config.CLAUDE_MODEL),
+        model=_get(resp, "model", config.CLAUDE_MODEL),
         latency_ms=latency_ms,
     )

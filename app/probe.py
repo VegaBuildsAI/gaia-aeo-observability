@@ -29,10 +29,15 @@ def _log(msg: str, level: str = "info") -> None:
         sys.stdout.buffer.write(f"[probe:{level}] {msg}\n".encode("utf-8", "replace"))
 
 
+def _today() -> str:
+    """Fecha del día en UTC. Única fuente de la fecha del sondeo — nunca hardcodear."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
 def run(engines: list[str] | None = None, date: str | None = None) -> dict:
     """Corre un ciclo completo de sondeo. Devuelve un resumen."""
     engines = engines or config.active_engines()
-    date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date = date or _today()
 
     STATE.update(status="running", progress=0.0)
     _log(f"Inicio de sondeo · fecha={date} · motores={engines}", "head")

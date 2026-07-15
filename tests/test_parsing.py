@@ -88,3 +88,35 @@ def test_parse_collects_text_and_citations():
     assert out.latency_ms == 123
     assert "gaiaschoolcr.org" in out.cited_domains
     assert "futuro-verde.org" in out.cited_domains
+
+
+def test_parse_handles_dict_blocks():
+    """REGRESIÓN — este es el bug que dejó cited_domains en [] toda la campaña.
+
+    Según la versión del SDK, los bloques de web_search llegan como objetos tipados o
+    como dicts. El parser original usaba solo getattr() → con dicts devolvía vacío,
+    aunque la API sí hubiera ejecutado la búsqueda.
+    """
+    resp = {
+        "model": "claude-haiku-4-5",
+        "content": [
+            {"type": "text", "text": "Based on the search results, Gaia School…",
+             "citations": [{"url": "https://gaiaschoolcr.org/", "title": "Gaia School"}]},
+            {"type": "web_search_tool_result",
+             "content": [{"url": "https://hermosavalleyschool.org", "title": "Hermosa Valley"}]},
+        ],
+    }
+    out = _parse(resp, 999)
+    assert "gaiaschoolcr.org" in out.cited_domains
+    assert "hermosavalleyschool.org" in out.cited_domains
+    assert out.model == "claude-haiku-4-5"
+
+
+def test_parse_mixed_objects_and_dicts():
+    resp = _Resp([
+        _Block(type="text", text="Ver ", citations=[]),
+        {"type": "web_search_tool_result",
+         "content": [{"url": "https://arkadia.education", "title": "Arkadia"}]},
+    ])
+    out = _parse(resp, 1)
+    assert "arkadia.education" in out.cited_domains
