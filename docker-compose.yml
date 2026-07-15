@@ -1,0 +1,36 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-4-8}
+      - DATABASE_URL=postgresql://aeo:aeo@db:5432/aeo
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-dev-token}
+      - PROBE_CRON=${PROBE_CRON:-0 9 * * *}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+      - ./static:/app/static
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=aeo
+      - POSTGRES_PASSWORD=aeo
+      - POSTGRES_DB=aeo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aeo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

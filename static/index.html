@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gaia School — AEO Observability</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f2f4f2;color:#111;min-height:100vh}
+.wrap{max-width:980px;margin:0 auto;padding:12px 14px 90px}
+.card{background:#fff;border-radius:10px;border:1px solid #e2e4e2;margin-bottom:10px;padding:14px 16px}
+
+/* HEADER */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brandmark{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0F6E56,#5DCAA5);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.hdr h1{font-size:16px;font-weight:700;line-height:1.3}
+.hdr .sub{font-size:11px;color:#888;margin-top:2px}
+.mode-banner{display:flex;align-items:center;gap:8px;background:#EAF3DE;border:1px solid #C0DD97;border-radius:8px;padding:6px 10px;font-size:11px;color:#3B6D11}
+.mode-banner code{background:#C0DD97;border-radius:4px;padding:1px 5px;font-size:10px;color:#173404;font-family:monospace}
+
+/* STAT BAR */
+.stats-bar{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 2px}
+.stat-pill{display:flex;align-items:center;gap:5px;background:#f5f6f5;border:1px solid #e5e7e5;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:#333}
+.stat-pill .sp-val{color:#0F6E56;font-weight:800}
+.stat-pill .sp-warn{color:#C86A00;font-weight:800}
+.stat-pill .sp-alert{color:#B91C1C;font-weight:800}
+
+/* CONFIG / BUTTONS */
+.brow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font-family:inherit;cursor:pointer;border-radius:7px;border:1.5px solid #ddd;padding:7px 14px;font-size:12px;font-weight:600;background:#fff;color:#111;transition:all .12s}
+button:hover{background:#f3f3f3;border-color:#bbb}
+button:active{transform:scale(.97)}
+.btn-run{background:#0F6E56;color:#fff;border-color:#0F6E56;font-size:13px;padding:8px 18px}
+.btn-run:hover{background:#085041}
+.btn-run:disabled{background:#8fbdaf;border-color:#8fbdaf;cursor:wait}
+select,input[type=text]{border:1.5px solid #ddd;border-radius:7px;padding:6px 9px;font-size:12px;background:#fff;color:#111;outline:none}
+select:focus,input:focus{border-color:#1D9E75}
+
+/* CONSOLE */
+.con-wrap{background:#0d1117;border-radius:8px;overflow:hidden;margin-top:10px}
+.con-head{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #1a2332}
+.con-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;font-family:monospace}
+.con{height:150px;overflow-y:auto;padding:8px 12px;font-family:'Consolas','Monaco',monospace;font-size:11px;line-height:1.6;color:#adb5bd}
+.lh{color:#79c0ff;font-weight:700}.lok{color:#3fb950}.lw{color:#d29922}.le{color:#f85149}.lt{color:#556}
+.prog{height:3px;background:#1a2332;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#1D9E75,#5DCAA5);width:0%;transition:width .4s ease}
+
+/* SECTION TITLES */
+.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:9px;padding-bottom:4px;border-bottom:1px solid #ebebeb}
+
+/* CHARTS */
+.ch{position:relative;height:210px;margin:4px 0}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+
+/* TABLES */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:#f7f8f7}
+th{text-align:left;padding:6px 8px;font-weight:700;color:#555;font-size:11px;border-bottom:1px solid #e8e8e8;white-space:nowrap}
+td{padding:5px 8px;border-bottom:.5px solid #f0f0f0;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.mono{font-family:monospace}
+.bdg{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.bg{background:#E1F5EE;color:#085041}.ba{background:#FAEEDA;color:#633806}.br{background:#FCEBEB;color:#791F1F}.bn{background:#F3F4F6;color:#374151}
+.bar{display:inline-block;height:8px;border-radius:2px;background:#0F6E56;vertical-align:middle}
+.brand-row td{background:#F0FDF7 !important;font-weight:700}
+.empty{text-align:center;padding:24px;color:#bbb}
+.matrix td.hit{background:#D1FAE5;color:#065F46;font-weight:800;text-align:center}
+.matrix td.miss{background:#FEE2E2;color:#7F1D1D;text-align:center}
+.matrix td.na{background:#F3F4F6;color:#9ca3af;text-align:center}
+
+/* CHAT WIDGET (mismo tratamiento que JPS Tiempos Lab) */
+.chat-fab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0F6E56,#5DCAA5);border:none;box-shadow:0 6px 18px rgba(15,110,86,.4);cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:50}
+.chat-panel{position:fixed;right:18px;bottom:84px;width:380px;max-width:calc(100vw - 36px);height:520px;max-height:calc(100vh - 120px);background:#fff;border-radius:14px;border:1px solid #dde0dd;box-shadow:0 12px 40px rgba(0,0,0,.18);display:none;flex-direction:column;overflow:hidden;z-index:50}
+.chat-panel.open{display:flex}
+.chat-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#0F6E56,#137a60);color:#fff}
+.chat-head .logo{width:30px;height:30px;font-size:16px;background:rgba(255,255,255,.18)}
+.chat-head .ct{font-size:13px;font-weight:700}.chat-head .cs{font-size:10px;opacity:.85}
+.chat-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:#f7f8f7}
+.msg{max-width:85%;padding:8px 11px;border-radius:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+.msg.u{align-self:flex-end;background:#0F6E56;color:#fff;border-bottom-right-radius:3px}
+.msg.a{align-self:flex-start;background:#fff;border:1px solid #e6e8e6;border-bottom-left-radius:3px}
+.msg.tool{align-self:flex-start;background:#EEF6F2;border:1px dashed #A7D7C5;color:#0F6E56;font-size:10.5px;font-family:monospace;padding:4px 9px}
+.chat-foot{display:flex;gap:7px;padding:10px;border-top:1px solid #eee;background:#fff}
+.chat-foot input{flex:1}
+.chat-foot button{background:#0F6E56;color:#fff;border-color:#0F6E56}
+.suggest{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 8px;background:#f7f8f7}
+.chip{font-size:10.5px;border:1px solid #cfe3da;background:#fff;color:#0F6E56;border-radius:14px;padding:3px 9px;cursor:pointer}
+.chip:hover{background:#EAF3DE}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="card">
+    <div class="hdr">
+      <div class="brandmark">
+        <div class="logo">🌱</div>
+        <div>
+          <h1>Gaia School — Motor de Observabilidad AEO</h1>
+          <div class="sub">¿Nos citan las IA? · Monitoreo en vivo de citación, share of voice y tendencia · gaiaschoolcr.org</div>
+        </div>
+      </div>
+      <div class="mode-banner" id="modeBanner">cargando estado…</div>
+    </div>
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="brow" style="margin-top:6px">
+      <button class="btn-run" id="btnRun" onclick="runProbe()">▶ Correr sondeo ahora</button>
+      <button onclick="refreshAll()">↻ Refrescar</button>
+      <button onclick="logout()" style="margin-left:auto">Salir</button>
+      <select id="sinceSel" onchange="refreshAll()">
+        <option value="">Toda la campaña</option>
+        <option value="7d">Últimos 7 días</option>
+        <option value="14d">Últimos 14 días</option>
+        <option value="30d">Últimos 30 días</option>
+      </select>
+      <span id="trendPill"></span>
+    </div>
+    <!-- CONSOLE -->
+    <div class="con-wrap">
+      <div class="prog"><div class="prog-fill" id="prog"></div></div>
+      <div class="con-head"><span class="con-title">■ probe console</span>
+        <span class="con-title" id="probeStatus">idle</span></div>
+      <div class="con" id="con"><span class="lh">Gaia AEO Observability — v1.0</span>
+<br><span class="lt">›</span> Esperando datos. Corré un sondeo o esperá el tick diario.</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="card">
+    <div class="sec-title">Tendencia de citación · 2 meses</div>
+    <div class="grid2">
+      <div class="ch"><canvas id="chTrend"></canvas></div>
+      <div class="ch"><canvas id="chSov"></canvas></div>
+    </div>
+  </div>
+
+  <!-- BY ENGINE + MATRIX -->
+  <div class="card">
+    <div class="sec-title">Tasa de citación por motor y por clase de query</div>
+    <div class="tw"><table id="tblEngine"></table></div>
+  </div>
+
+  <!-- CITED DOMAINS -->
+  <div class="card">
+    <div class="sec-title">Ranking de dominios citados por las IA (mapa competitivo de fuentes)</div>
+    <div class="tw"><table id="tblDomains"></table></div>
+  </div>
+
+  <!-- PROMPT EFFECTIVENESS -->
+  <div class="card">
+    <div class="sec-title">Efectividad por prompt (qué preguntas revelan mejor a Gaia)</div>
+    <div class="tw"><table id="tblPrompts"></table></div>
+  </div>
+</div>
+
+<!-- CHAT WIDGET -->
+<button class="chat-fab" onclick="toggleChat()" title="Gaia AEO Assistant">💬</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
+    <div class="logo">🌱</div>
+    <div><div class="ct">Gaia AEO Assistant</div><div class="cs">Pregúntame sobre los datos en vivo</div></div>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="msg a">¡Hola! Soy el asistente AEO de Gaia. Puedo consultar los datos del motor: tasa de citación, tendencia, competidores y fuentes.</div>
+  </div>
+  <div class="suggest" id="suggest">
+    <span class="chip" onclick="askChip(this)">¿Cuál es la tasa de citación hoy?</span>
+    <span class="chip" onclick="askChip(this)">¿Quién nos gana en share of voice?</span>
+    <span class="chip" onclick="askChip(this)">¿Va subiendo la tendencia?</span>
+  </div>
+  <div class="chat-foot">
+    <input type="text" id="chatInput" placeholder="Escribe tu pregunta…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+function sinceParam(){
+  const v = $('#sinceSel').value;
+  if(!v) return '';
+  const d = new Date(); d.setDate(d.getDate() - parseInt(v));
+  return d.toISOString().slice(0,10);
+}
+function pct(x){ return (x*100).toFixed(0)+'%'; }
+function conLine(l){
+  const cls = {head:'lh',ok:'lok',warn:'lw',err:'le',info:'lt'}[l.level]||'lt';
+  return `<br><span class="${cls}">›</span> <span class="${cls==='lt'?'':cls}">${l.msg}</span>`;
+}
+
+let trendChart, sovChart;
+
+async function loadStatus(){
+  const s = await (await fetch('/api/status')).json();
+  const eng = Object.entries(s.engines_available).map(([k,v])=>`<code>${k}${v?'✓':'✗'}</code>`).join(' ');
+  const mode = s.scheduler_enabled ? `cron <code>${s.cron}</code>` : `<code>sondeo manual</code>`;
+  $('#modeBanner').innerHTML = `motores: ${eng} · ${mode}`;
+  $('#probeStatus').textContent = s.probe_status;
+  return s;
+}
+
+async function loadState(){
+  const rs = await fetch('/api/state');
+  if(rs.status===401){ location.href='/login'; return {status:'idle',progress:0,log:[]}; }
+  const st = await rs.json();
+  $('#prog').style.width = (st.progress*100)+'%';
+  $('#probeStatus').textContent = st.status;
+  if(st.log && st.log.length){
+    $('#con').innerHTML = '<span class="lh">Gaia AEO Observability — v1.0</span>' + st.log.map(conLine).join('');
+    $('#con').scrollTop = $('#con').scrollHeight;
+  }
+  $('#btnRun').disabled = (st.status==='running');
+  return st;
+}
+
+async function loadMetrics(){
+  const q = sinceParam();
+  const url = '/api/metrics' + (q ? `?since=${q}` : '');
+  const rm = await fetch(url);
+  if(rm.status===401){ location.href='/login'; return; }
+  const rep = await rm.json();
+  renderStats(rep); renderTrend(rep); renderSov(rep);
+  renderEngine(rep); renderDomains(rep); renderPrompts(rep);
+}
+
+function renderStats(rep){
+  const o = rep.overall, sov = rep.share_of_voice.share, t = rep.trend;
+  const gaia = sov[rep.brand]||0;
+  const arrow = {up:'▲',down:'▼',flat:'▬'}[t.direction];
+  const acls = t.direction==='up'?'sp-val':t.direction==='down'?'sp-alert':'sp-warn';
+  $('#statsBar').innerHTML = `
+    <div class="stat-pill">Citation rate <span class="sp-val">${pct(o.rate)}</span> <span style="color:#999">CI ${pct(o.ci_low)}–${pct(o.ci_high)}</span></div>
+    <div class="stat-pill">n = <span class="sp-val">${o.n}</span> sondeos</div>
+    <div class="stat-pill">Share of voice Gaia <span class="sp-val">${pct(gaia)}</span></div>
+    <div class="stat-pill">Tendencia <span class="${acls}">${arrow} ${(t.delta*100).toFixed(1)} pp</span></div>
+    <div class="stat-pill">Campaña <span class="sp-val">${rep.daily_series.length}</span>/${rep.campaign_days} días</div>`;
+  if(rep.anomalies.length){
+    $('#trendPill').innerHTML = `<span class="stat-pill"><span class="sp-warn">⚠ ${rep.anomalies.length} anomalía(s)</span></span>`;
+  } else $('#trendPill').innerHTML='';
+}
+
+function renderTrend(rep){
+  const s = rep.daily_series;
+  const ctx = $('#chTrend');
+  const data = {labels:s.map(p=>p.date.slice(5)),
+    datasets:[{label:'Citation rate',data:s.map(p=>+(p.rate*100).toFixed(1)),
+      borderColor:'#0F6E56',backgroundColor:'rgba(93,202,165,.18)',fill:true,tension:.3,pointRadius:2}]};
+  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Citation rate diario (%)',color:'#555',font:{size:11}}},
+    scales:{y:{beginAtZero:true,max:100,ticks:{color:'#999'}},x:{ticks:{color:'#999',maxRotation:0}}}};
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx,{type:'line',data,options:opts});
+}
+
+function renderSov(rep){
+  const sh = rep.share_of_voice.counts;
+  const labels = Object.keys(sh), vals = Object.values(sh);
+  const colors = labels.map(l=> l===rep.brand ? '#0F6E56' : '#C86A00');
+  const ctx = $('#chSov');
+  if(sovChart) sovChart.destroy();
+  sovChart = new Chart(ctx,{type:'bar',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},title:{display:true,text:'Share of voice (menciones)',color:'#555',font:{size:11}}},
+      scales:{x:{beginAtZero:true,ticks:{color:'#999'}},y:{ticks:{color:'#555',font:{size:11}}}}}});
+}
+
+function rateCell(cr){
+  return `<span class="mono">${pct(cr.rate)}</span> <span style="color:#aaa;font-size:10px">${cr.hits}/${cr.n}</span>`;
+}
+function renderEngine(rep){
+  let h = '<thead><tr><th>Dimensión</th><th>Valor</th><th>Citation rate</th><th>CI 95%</th></tr></thead><tbody>';
+  h += `<tr class="brand-row"><td>GLOBAL</td><td>todos</td><td>${rateCell(rep.overall)}</td><td class="mono" style="color:#888">${pct(rep.overall.ci_low)}–${pct(rep.overall.ci_high)}</td></tr>`;
+  for(const [k,cr] of Object.entries(rep.by_engine))
+    h += `<tr><td>Motor</td><td>${k}</td><td>${rateCell(cr)}</td><td class="mono" style="color:#888">${pct(cr.ci_low)}–${pct(cr.ci_high)}</td></tr>`;
+  for(const [k,cr] of Object.entries(rep.by_class))
+    h += `<tr><td>Clase</td><td>${k}</td><td>${rateCell(cr)}</td><td class="mono" style="color:#888">${pct(cr.ci_low)}–${pct(cr.ci_high)}</td></tr>`;
+  h += '</tbody>';
+  $('#tblEngine').innerHTML = rep.overall.n? h : '<tbody><tr><td class="empty">Sin datos aún — corré un sondeo.</td></tr></tbody>';
+}
+
+function renderDomains(rep){
+  const d = rep.cited_domains;
+  if(!d.length){ $('#tblDomains').innerHTML='<tbody><tr><td class="empty">Sin datos aún.</td></tr></tbody>'; return; }
+  const max = Math.max(...d.map(x=>x.count));
+  let h='<thead><tr><th>#</th><th>Dominio</th><th>Citas</th><th style="width:40%"></th></tr></thead><tbody>';
+  d.forEach((x,i)=>{ h+=`<tr class="${x.is_brand?'brand-row':''}"><td>${i+1}</td><td class="mono">${x.domain}${x.is_brand?' 🌱':''}</td><td>${x.count}</td><td><span class="bar" style="width:${(x.count/max*100).toFixed(0)}%;background:${x.is_brand?'#0F6E56':'#9bbfae'}"></span></td></tr>`; });
+  $('#tblDomains').innerHTML = h+'</tbody>';
+}
+
+function renderPrompts(rep){
+  const p = rep.prompt_effectiveness;
+  if(!p.length){ $('#tblPrompts').innerHTML='<tbody><tr><td class="empty">Sin datos aún.</td></tr></tbody>'; return; }
+  let h='<thead><tr><th>Prompt</th><th>Clase</th><th>Idioma</th><th>Citation rate</th></tr></thead><tbody>';
+  p.forEach(x=>{ const cls=x.rate>=.5?'bg':x.rate>0?'ba':'br';
+    h+=`<tr><td class="mono" style="font-size:11px">${x.prompt_id}</td><td><span class="bdg bn">${x.prompt_class}</span></td><td>${x.lang}</td><td><span class="bdg ${cls}">${pct(x.rate)}</span> <span style="color:#aaa;font-size:10px">${x.hits}/${x.n}</span></td></tr>`; });
+  $('#tblPrompts').innerHTML = h+'</tbody>';
+}
+
+async function runProbe(){
+  // El token se pide SIEMPRE (no se guarda) — control explícito del gasto.
+  // NUNCA poner el token en este archivo: se sirve al navegador y va al repo.
+  const tok = prompt('Token para disparar el sondeo:');
+  if(!tok) return;
+  $('#btnRun').disabled = true;
+  const r = await fetch('/api/probe/run',{method:'POST',headers:{'X-Admin-Token':tok}});
+  if(r.status===401){ alert('Token inválido o sesión expirada.'); $('#btnRun').disabled=false; return; }
+  if(r.status===409){ alert('Ya hay un sondeo en curso.'); $('#btnRun').disabled=false; return; }
+  pollDuringRun();
+}
+async function logout(){ await fetch('/api/logout',{method:'POST'}); location.href='/login'; }
+function pollDuringRun(){
+  const iv = setInterval(async ()=>{
+    const st = await loadState();
+    if(st.status!=='running'){ clearInterval(iv); refreshAll(); }
+  }, 2000);
+}
+
+async function refreshAll(){ await loadStatus(); await loadState(); await loadMetrics(); }
+
+/* ─── CHAT ─── */
+function toggleChat(){ $('#chatPanel').classList.toggle('open'); }
+function askChip(el){ $('#chatInput').value = el.textContent; sendChat(); }
+const chatHistory = [];
+function addMsg(cls,text){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=text; $('#chatBody').appendChild(d); $('#chatBody').scrollTop=$('#chatBody').scrollHeight; return d; }
+async function sendChat(){
+  const inp=$('#chatInput'); const q=inp.value.trim(); if(!q) return; inp.value='';
+  addMsg('u',q); chatHistory.push({role:'user',content:q});
+  const bubble=addMsg('a','…'); let acc='';
+  try{
+    const resp=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:chatHistory})});
+    const reader=resp.body.getReader(); const dec=new TextDecoder(); let buf='';
+    while(true){ const {value,done}=await reader.read(); if(done) break; buf+=dec.decode(value,{stream:true});
+      const parts=buf.split('\n\n'); buf=parts.pop();
+      for(const p of parts){
+        const ev=(p.match(/event: (.*)/)||[])[1]; const dt=(p.match(/data: ([\s\S]*)/)||[])[1];
+        if(ev==='token'){ acc+=dt; bubble.textContent=acc; }
+        else if(ev==='tool'){ const t=addMsg('tool','⚙ consultando '+JSON.parse(dt).name); }
+        else if(ev==='error'){ bubble.textContent='⚠ '+JSON.parse(dt).message; }
+        $('#chatBody').scrollTop=$('#chatBody').scrollHeight;
+      }
+    }
+    chatHistory.push({role:'assistant',content:acc||bubble.textContent});
+  }catch(e){ bubble.textContent='⚠ error de conexión'; }
+}
+
+refreshAll();
+setInterval(loadState, 4000);
+</script>
+</body>
+</html>
