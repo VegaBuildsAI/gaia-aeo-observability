@@ -66,8 +66,16 @@ def by_dimension(rows: list[ProbeResult], attr: str) -> dict:
 
 
 def share_of_voice(rows: list[ProbeResult]) -> dict:
+    """Menciones de la marca vs. TODO el benchmark competitivo.
+
+    Los competidores se inicializan en 0 a propósito: un competidor con cero menciones
+    debe verse como cero, no desaparecer del gráfico. Si no, no se puede distinguir
+    "no lo mencionan" de "no lo estamos midiendo" — y el cero también es información.
+    """
     counts = Counter()
     counts[config.BRAND_NAME] = sum(1 for r in rows if _is_hit(r))
+    for c in config.COMPETITORS:
+        counts.setdefault(c["name"], 0)
     for r in rows:
         for c in (r.competitors_mentioned or []):
             counts[c] += 1

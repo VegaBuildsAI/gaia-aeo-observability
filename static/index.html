@@ -52,8 +52,13 @@ select:focus,input:focus{border-color:#1D9E75}
 .sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:9px;padding-bottom:4px;border-bottom:1px solid #ebebeb}
 
 /* CHARTS */
-.ch{position:relative;height:210px;margin:4px 0}
+/* min-width:0 es obligatorio: por defecto los hijos de un grid usan min-width:auto,
+   así que el <canvas> puede empujar la columna y desbordar la card (solo crece, nunca
+   encoge). Con min-width:0 el canvas se ajusta al contenedor. */
+.ch{position:relative;height:210px;margin:4px 0;min-width:0;overflow:hidden}
+.ch canvas{max-width:100%!important;display:block}
 .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+.grid2>*{min-width:0}
 @media(max-width:720px){.grid2{grid-template-columns:1fr}}
 
 /* TABLES */

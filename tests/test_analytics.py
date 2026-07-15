@@ -44,6 +44,30 @@ def test_share_of_voice():
     assert abs(sum(sov["share"].values()) - 1.0) < 1e-6
 
 
+def test_share_of_voice_includes_competitors_with_zero_mentions():
+    """El benchmark debe mostrarse completo: un 0 es información, no una ausencia.
+
+    Antes, un competidor sin menciones desaparecía del gráfico y no se podía
+    distinguir "no lo mencionan" de "no lo estamos midiendo".
+    """
+    from app import config
+    rows = [_row("2026-07-01", "claude", "brand", True, comps=["Futuro Verde"])]
+    sov = analytics.share_of_voice(rows)
+    for c in config.COMPETITORS:
+        assert c["name"] in sov["counts"], f"{c['name']} falta en el benchmark"
+    assert sov["counts"]["Arkadia"] == 0
+    assert sov["counts"]["Hermosa Valley School"] == 0
+    assert sov["counts"]["Futuro Verde"] == 1
+
+
+def test_share_of_voice_with_no_rows_still_lists_benchmark():
+    from app import config
+    sov = analytics.share_of_voice([])
+    assert sov["total_mentions"] == 0
+    assert len(sov["counts"]) == 1 + len(config.COMPETITORS)   # marca + competidores
+    assert all(v == 0 for v in sov["counts"].values())
+
+
 def test_cited_domains_ranking_flags_brand():
     rows = [_row("2026-07-01", "claude", "brand", True, domains=["gaiaschoolcr.org", "wikipedia.org"]),
             _row("2026-07-02", "claude", "brand", True, domains=["gaiaschoolcr.org"])]
