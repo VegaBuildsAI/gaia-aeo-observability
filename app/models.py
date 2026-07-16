@@ -46,6 +46,51 @@ class ProbeResult(SQLModel, table=True):
     error: Optional[str] = None
 
 
+class ProbeRun(SQLModel, table=True):
+    """One complete probe run, triggered manually or by the scheduler."""
+    __tablename__ = "probe_run"
+
+    id: str = Field(primary_key=True)
+    date: str = Field(index=True)
+    started_at: datetime = Field(default_factory=_utcnow, index=True)
+    completed_at: Optional[datetime] = None
+    trigger: str = Field(default="manual", index=True)
+    status: str = Field(default="running", index=True)
+    engines: list = Field(default_factory=list, sa_column=Column(JSON))
+    prompts_total: int = 0
+    executions_written: int = 0
+    errors: int = 0
+    summary: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class ProbeRunResult(SQLModel, table=True):
+    """Append-only prompt result belonging to one specific run."""
+    __tablename__ = "probe_run_result"
+    __table_args__ = (
+        UniqueConstraint("run_id", "prompt_id", "engine", name="uq_run_prompt_engine"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    run_id: str = Field(foreign_key="probe_run.id", index=True)
+    date: str = Field(index=True)
+    prompt_id: str = Field(index=True)
+    engine: str = Field(index=True)
+    ts: datetime = Field(default_factory=_utcnow, index=True)
+    model: str = ""
+    prompt_text: str = ""
+    prompt_class: str = ""
+    lang: str = "es"
+    answer_text: str = ""
+    gaia_mentioned: bool = Field(default=False, index=True)
+    gaia_in_citations: bool = False
+    citation_rank: Optional[int] = None
+    sentiment: str = "neutral"
+    latency_ms: int = 0
+    cited_domains: list = Field(default_factory=list, sa_column=Column(JSON))
+    competitors_mentioned: list = Field(default_factory=list, sa_column=Column(JSON))
+    error: Optional[str] = None
+
+
 class MetricSnapshot(SQLModel, table=True):
     """Foto diaria de una métrica agregada (para gráficas rápidas de tendencia)."""
     __tablename__ = "metric_snapshot"
