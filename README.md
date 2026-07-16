@@ -28,6 +28,9 @@ mismo tratamiento visual que JPS Tiempos Lab.
 7. **Sondeo manual** — no hay scheduler automático por defecto: los probes solo
    corren cuando los disparás (botón ▶ o `POST /api/probe/run`), para controlar el
    gasto del token. (`SCHEDULER_ENABLED=true` reactiva el tick diario si algún día lo querés.)
+8. **Historial por corrida** — cada disparo recibe un `run_id` y conserva una fila
+   inmutable por prompt/motor en `probe_run_result`. La tabla `probe_result` sigue
+   siendo la vista diaria deduplicada que alimenta el dashboard.
 
 ## Correr en local
 
@@ -69,5 +72,7 @@ Ver [DEPLOY.md](DEPLOY.md) — Railway (cuenta `msvv11@gmail.com`).
 | GET | `/api/state` | Estado del sondeo + log de consola |
 | GET | `/api/metrics?since=YYYY-MM-DD` | Reporte analítico completo |
 | GET | `/api/probes?since=&limit=` | Filas de sondeo crudas |
-| POST | `/api/probe/run` | Dispara sondeo manual (header `X-Admin-Token`) |
+| GET | `/api/runs?since=&limit=` | Historial de corridas por fecha y `run_id` |
+| GET | `/api/run-results?run_id=&since=&limit=` | Resultados inmutables de cada corrida |
+| POST | `/api/probe/run` | Dispara sondeo manual y devuelve `run_id` (header `X-Admin-Token`) |
 | POST | `/api/chat` | Chatbot (SSE) — body `{messages:[...]}` |

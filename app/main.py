@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from . import analytics, auth, chat, config, probe, scheduler
 from .db import get_session, init_db
 from .engines import get_adapter
-from .models import ProbeResult
+from .models import ProbeResult, ProbeRun, ProbeRunResult
 from .prompts import PROMPTS
 from sqlmodel import select
 
@@ -89,6 +89,7 @@ def status():
     return {"ok": True, "brand": config.BRAND_NAME, "domain": config.BRAND_DOMAIN,
             "engines_available": engines, "active_engines": config.active_engines(),
             "probe_status": probe.STATE["status"], "last_run": probe.STATE["last_run"],
+            "last_run_id": probe.STATE["last_run_id"],
             "scheduler_enabled": config.SCHEDULER_ENABLED,
             "next_run": scheduler.next_run(), "prompts": len(PROMPTS),
             "campaign_days": config.CAMPAIGN_DAYS, "cron": config.PROBE_CRON}
@@ -98,7 +99,9 @@ def status():
 def state(user: str = Depends(require_user)):
     """Estado en vivo del sondeo (para la consola del dashboard)."""
     return {"status": probe.STATE["status"], "progress": probe.STATE["progress"],
-            "last_run": probe.STATE["last_run"], "log": probe.STATE["log"][-120:]}
+            "last_run": probe.STATE["last_run"],
+            "last_run_id": probe.STATE["last_run_id"],
+            "log": probe.STATE["log"][-120:]}
 
 
 @app.get("/api/metrics")
@@ -117,14 +120,40 @@ def probes(since: str | None = Query(default=None), limit: int = Query(default=2
     return [r.model_dump() for r in rows]
 
 
+@app.get("/api/runs")
+def runs(since: str | None = Query(default=None), limit: int = Query(default=100, le=1000),
+         user: str = Depends(require_user)):
+    with get_session() as s:
+        q = select(ProbeRun).order_by(ProbeRun.started_at.desc())
+        if since:
+            q = q.where(ProbeRun.date >= since)
+        rows = list(s.exec(q.limit(limit)).all())
+    return [r.model_dump() for r in rows]
+
+
+@app.get("/api/run-results")
+def run_results(run_id: str | None = Query(default=None),
+                since: str | None = Query(default=None),
+                limit: int = Query(default=500, le=5000),
+                user: str = Depends(require_user)):
+    with get_session() as s:
+        q = select(ProbeRunResult).order_by(ProbeRunResult.ts.desc())
+        if run_id:
+            q = q.where(ProbeRunResult.run_id == run_id)
+        if since:
+            q = q.where(ProbeRunResult.date >= since)
+        rows = list(s.exec(q.limit(limit)).all())
+    return [r.model_dump() for r in rows]
+
+
 @app.post("/api/probe/run")
 def probe_run(x_admin_token: str | None = Header(default=None),
               user: str = Depends(require_user)):
     _require_admin(x_admin_token)
-    started = scheduler.run_now_async()
-    if not started:
+    run_id = scheduler.run_now_async()
+    if not run_id:
         return JSONResponse({"started": False, "reason": "Ya hay un sondeo en curso."}, status_code=409)
-    return {"started": True}
+    return {"started": True, "run_id": run_id}
 
 
 # ─── Chatbot (SSE) ────────────────────────────────────────────────────────
